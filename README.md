@@ -1,2 +1,2 @@
 # AutoSplitters
-A repo for LiveSplit for future AutoSplitters
+A repo for future LiveSplit AutoSplitters
