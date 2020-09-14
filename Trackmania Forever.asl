@@ -22,7 +22,8 @@ update
 
 init
 {
-    if (memory.ReadValue<byte>((System.IntPtr)0x00401076) == 0x70) {
+    var baseAddress = modules.First().BaseAddress;
+    if (memory.ReadValue<byte>(baseAddress + 0x1076) == 0x70) {
         version = "United";
         vars.targetInfoClass = 0x00B41FBC;
     } else {
