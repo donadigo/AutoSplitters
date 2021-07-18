@@ -1,18 +1,13 @@
 // TMF AutoSplitter
 // Made by donadigo
 
-state("TmForever", "Nations")
+state("TmForever")
 {
-    int playerInfoClass : 0x009560CC, 0x0, 0x1C, 0x0;
-    int raceTime : 0x009560CC, 0x0, 0x1C, 0x2B0;
-    bool raceFinished : 0x009560CC, 0x0, 0x1C, 0x33C;
-}
-
-state("TmForever", "United")
-{
-    int playerInfoClass : 0x0095772C, 0x0, 0x1C, 0x0;
-    int raceTime : 0x0095772C, 0x0, 0x1C, 0x2B0;
-    bool raceFinished : 0x0095772C, 0x0, 0x1C, 0x33C;
+    int playground            : 0x1580, -808, 0x454;
+    int playerInfosBufferSize : 0x1580, -808, 0x12C, 0x2FC;
+    int currentPlayerInfo     : 0x1580, -808, 0x12C, 0x300, 0x0;
+    int raceTime              : 0x1580, -808, 0x12C, 0x300, 0x0, 0x2B0;
+    int raceState             : 0x1580, -808, 0x12C, 0x300, 0x0, 292;
 }
 
 update
@@ -22,22 +17,24 @@ update
 
 init
 {
-    var baseAddress = modules.First().BaseAddress;
-    if (memory.ReadValue<byte>(baseAddress + 0x1076) == 0x70) {
-        version = "United";
-        vars.targetInfoClass = 0x00B41FBC;
-    } else {
-        version = "Nations";
-        vars.targetInfoClass = 0x00B41FC4;
-    }
-
     vars.currentRunTime = 0;
 }
 
 start
 {
-    vars.currentRunTime = 0;
-    return current.playerInfoClass == vars.targetInfoClass;
+    if (current.playground == 0 || 
+        current.playerInfosBufferSize == 0 ||
+        current.currentPlayerInfo == 0 ||
+        (current.raceState & 0x200) == 0) {
+        return false;
+    }
+
+    if (old.raceTime < 0 && current.raceTime >= 0) {
+        vars.currentRunTime = current.raceTime;
+        return true;
+    }
+
+    return false;
 }
 
 isLoading
@@ -47,9 +44,14 @@ isLoading
 
 gameTime
 {
-    if (current.playerInfoClass == vars.targetInfoClass &&
-        current.raceTime >= 0 &&
-        current.raceTime > old.raceTime) {
+    if (current.playground == 0 || 
+        current.playerInfosBufferSize == 0 ||
+        current.currentPlayerInfo == 0 ||
+        (current.raceState & 0x200) == 0) {
+        return System.TimeSpan.FromMilliseconds(vars.currentRunTime);
+    }
+
+    if (current.raceTime >= 0) {
         int oldRaceTime = Math.Max (old.raceTime, 0);
         int newRaceTime = Math.Max (current.raceTime, 0);
         vars.currentRunTime += (newRaceTime - oldRaceTime);
@@ -60,9 +62,9 @@ gameTime
 
 split
 {
-    if (current.playerInfoClass != vars.targetInfoClass) {
+    if (current.playground == 0 || current.playerInfosBufferSize == 0 || current.currentPlayerInfo == 0) {
         return false;
     }
 
-    return current.raceFinished && !old.raceFinished;
+    return (old.raceState & 0x400) == 0 && (current.raceState & 0x400) != 0;
 }
